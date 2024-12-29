@@ -8,7 +8,10 @@ import time
 import sqlite3
 from network_info_wizard import NetworkInformation
 from network_connection_analyzer import NetworkManager
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s %(levelname)s %(message)s')
 
 class Database:
     """Class responsible for interacting with the SQLite database for request limits."""
@@ -139,8 +142,9 @@ class App:
             return jsonify(statistics), 200
 
         except Exception as e:
-            # Log the error (not shown here, but would be logged in a real application)
-            return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+            # Log the error
+            logging.error(f"Error in get_report: {e}")
+            return jsonify({'error': 'Internal server error. Please try again later.'}), 500
 
     def run(self):
         """Run the Flask app."""
