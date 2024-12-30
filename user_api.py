@@ -11,7 +11,8 @@ from network_connection_analyzer import NetworkManager
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
 
 class Database:
     """Class responsible for interacting with the SQLite database for request limits."""
@@ -22,8 +23,10 @@ class Database:
     def get_connection(self):
         """Establish and return a connection to the SQLite database."""
         try:
+            logger.debug("Establishing database connection...")
             return sqlite3.connect(self.db_name)
         except sqlite3.DatabaseError as e:
+            logger.error(f"Database connection error: {e}")
             raise Exception(f"Database connection error: {e}")
 
     def check_request_limit(self, ip, limit=5, window=60):
@@ -44,6 +47,7 @@ class Database:
                     last_request_time = current_time
 
                 if request_count >= limit:
+                    logger.warning(f"Rate limit exceeded for IP {ip}")
                     conn.close()
                     return False
                 else:
@@ -57,11 +61,14 @@ class Database:
 
             conn.commit()
             conn.close()
+            logger.debug(f"Request count updated for IP {ip}")
             return True
 
         except sqlite3.DatabaseError as e:
+            logger.error(f"Database error during request limit check: {e}")
             raise Exception(f"Database error during request limit check: {e}")
         except Exception as e:
+            logger.error(f"Unexpected error: {e}")
             raise Exception(f"Unexpected error: {e}")
 
 
@@ -76,8 +83,10 @@ class RateLimiter:
     def check_and_update(self, ip):
         """Check if the IP has exceeded the request limit and update the database."""
         try:
+            logger.debug(f"Checking and updating rate limit for IP {ip}")
             return self.database.check_request_limit(ip, self.limit, self.window)
         except Exception as e:
+            logger.error(f"Error checking or updating rate limit: {e}")
             raise Exception(f"Error checking or updating rate limit: {e}")
 
 
@@ -88,22 +97,27 @@ class ReportGenerator:
     def get_report(report_type):
         """Generate a report based on the report type."""
         try:
+            logger.debug(f"Generating report of type {report_type}...")
             if report_type == 'basic_report':
                 statistics = NetworkInformation().network_report()
                 if statistics is None:
+                    logger.error('Failed to generate basic network report.')
                     return None, 'Failed to generate network report.'
                 return statistics, None
 
             elif report_type == 'advanced_report':
                 statistics = NetworkManager().network_report()
                 if statistics is None:
+                    logger.error('Failed to generate advanced network report.')
                     return None, 'Failed to generate network report.'
                 return statistics, None
 
             else:
+                logger.error('Invalid report type requested.')
                 return None, 'Invalid report type. Please choose "basic_report" or "advanced_report".'
 
         except Exception as e:
+            logger.error(f"Error generating report: {e}")
             raise Exception(f"Error generating report: {e}")
 
 
@@ -127,31 +141,36 @@ class App:
     def get_report(self):
         """Endpoint to handle the report generation."""
         ip = request.remote_addr  # Get the client's IP address
-        
+        logger.debug(f"Received request from IP {ip}")
+
         # Check if the IP has exceeded the rate limit
         try:
             if not self.rate_limiter.check_and_update(ip):
+                logger.warning(f"Request from IP {ip} exceeded rate limit.")
                 return jsonify({'error': 'Request limit exceeded. Please try again later.'}), 429
 
             report_type = request.args.get('type', default='single_report', type=str)
 
             statistics, error = self.report_generator.get_report(report_type)
             if error:
+                logger.error(f"Error generating report: {error}")
                 return jsonify({'error': error}), 400
 
+            logger.debug("Report generated successfully.")
             return jsonify(statistics), 200
 
         except Exception as e:
             # Log the error
-            logging.error(f"Error in get_report: {e}")
+            logger.error(f"Error in get_report: {e}")
             return jsonify({'error': 'Internal server error. Please try again later.'}), 500
 
     def run(self):
         """Run the Flask app."""
         try:
+            logger.info("Starting Flask app...")
             self.app.run(host='0.0.0.0', port=5000, debug=True)
         except Exception as e:
-            # Log the error (not shown here, but would be logged in a real application)
+            logger.error(f"Error running the app: {e}")
             print(f"Error running the app: {e}")
 
 

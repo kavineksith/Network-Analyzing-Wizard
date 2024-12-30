@@ -3,17 +3,28 @@
 import json
 import psutil
 import socket
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG,  # Log all levels (DEBUG and above)
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[logging.StreamHandler()])
+
+# Create a logger
+logger = logging.getLogger(__name__)
 
 class NetworkInformation:
     @staticmethod
     # Function to check localhost connectivity
     def check_localhost_connectivity():
         try:
+            logger.info("Checking localhost connectivity...")
             socket.gethostbyname('127.0.0.1')
             status = "PC is connected to localhost."
+            logger.info("PC is connected to localhost.")
         except socket.gaierror:
             status = "PC isn't connected to localhost."
+            logger.error("PC isn't connected to localhost.")
         finally:
             socket.socket(socket.AF_INET, socket.SOCK_STREAM).close()
 
@@ -23,10 +34,13 @@ class NetworkInformation:
     # Function to check network connectivity
     def check_network_connectivity():
         try:
+            logger.info("Checking network connectivity...")
             socket.gethostbyname('www.google.com')
             status = "PC is connected to the internet."
+            logger.info("PC is connected to the internet.")
         except socket.gaierror:
             status = "PC isn't connected to the internet."
+            logger.error("PC isn't connected to the internet.")
         finally:
             socket.socket(socket.AF_INET, socket.SOCK_STREAM).close()
 
@@ -36,8 +50,9 @@ class NetworkInformation:
     # Function to monitor network traffic
     def monitor_network_traffic():
         try:
+            logger.info("Monitoring network traffic...")
             network = psutil.net_io_counters()
-            return {
+            traffic_info = {
                 'Network Traffic Information': {
                     'Send': f'{network.bytes_sent / (1024 ** 2):.2f} Mbps',
                     'Received': f'{network.bytes_recv / (1024 ** 2):.2f} Mbps',
@@ -51,14 +66,17 @@ class NetworkInformation:
                     'DropOut': f'{network.dropout}'
                 }
             }
+            logger.info("Network traffic monitored successfully.")
+            return traffic_info
         except Exception as e:
-            return {"error":f"Network Traffic Monitoring Error: {e}"}
+            logger.error(f"Network Traffic Monitoring Error: {e}")
+            return {"error": f"Network Traffic Monitoring Error: {e}"}
 
     @staticmethod
     # Function to manage network statistics
     def network_report():
         try:
-            # Network Usage Statistics
+            logger.info("Generating network report...")
             localhost_connectivity = NetworkInformation().check_localhost_connectivity()
             network_connectivity = NetworkInformation().check_network_connectivity()
             network_traffic = NetworkInformation().monitor_network_traffic()
@@ -72,6 +90,8 @@ class NetworkInformation:
             }
 
             result = json.dumps(statistics, indent=4)
+            logger.info("Network report generated successfully.")
             return result
         except Exception as e:
-            return {"error":f"Network Traffic Monitoring Report Generating Error: {e}"}
+            logger.error(f"Network Traffic Monitoring Report Generating Error: {e}")
+            return {"error": f"Network Traffic Monitoring Report Generating Error: {e}"}

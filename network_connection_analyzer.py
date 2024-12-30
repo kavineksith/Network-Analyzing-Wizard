@@ -3,7 +3,15 @@
 import json
 import psutil
 import netifaces
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG,  # Log all levels (DEBUG and above)
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[logging.StreamHandler()])
+
+# Create a logger
+logger = logging.getLogger(__name__)
 
 class NetworkManager:
     def __init__(self):
@@ -16,6 +24,7 @@ class NetworkManager:
     def gather_interface_stats(self):
         """Gathers network interface statistics."""
         try:
+            logger.info("Gathering network interface statistics...")
             stats = psutil.net_if_stats()
             for iface, info in stats.items():
                 self.data["interface_stats"][iface] = {
@@ -25,12 +34,15 @@ class NetworkManager:
                     "mtu": info.mtu,
                     "flags": info.flags
                 }
+            logger.info("Network interface statistics gathered successfully.")
         except Exception as e:
-            return {"error":f"Error gathering interface stats: {e}"}
+            logger.error(f"Error gathering interface stats: {e}")
+            return {"error": f"Error gathering interface stats: {e}"}
 
     def gather_interface_addrs(self):
         """Gathers network interface addresses."""
         try:
+            logger.info("Gathering network interface addresses...")
             addrs = psutil.net_if_addrs()
             for iface, info_list in addrs.items():
                 self.data["interface_addrs"][iface] = []
@@ -42,12 +54,15 @@ class NetworkManager:
                         "broadcast": info.broadcast,
                         "ptp": info.ptp
                     })
+            logger.info("Network interface addresses gathered successfully.")
         except Exception as e:
-            return {"error":f"Error gathering interface addresses: {e}"}
+            logger.error(f"Error gathering interface addresses: {e}")
+            return {"error": f"Error gathering interface addresses: {e}"}
 
     def gather_connections(self, kind: str):
         """Gathers network connections of a specific kind."""
         try:
+            logger.info(f"Gathering network connections of type: {kind}...")
             connections = psutil.net_connections(kind=kind)
             self.data["connections"][kind] = []
             for conn in connections:
@@ -60,11 +75,14 @@ class NetworkManager:
                     "status": conn.status,
                     "pid": conn.pid if conn.pid is not None else 'None'
                 })
+            logger.info(f"Network connections of type {kind} gathered successfully.")
         except Exception as e:
-            return {"error":f"Error gathering connections for kind='{kind}': {e}"}
+            logger.error(f"Error gathering connections for kind='{kind}': {e}")
+            return {"error": f"Error gathering connections for kind='{kind}': {e}"}
 
     def gather_all_info(self):
         """Gathers all network-related information."""
+        logger.info("Gathering all network-related information...")
         self.gather_interface_stats()
         self.gather_interface_addrs()
         kinds = [
@@ -80,6 +98,7 @@ class NetworkManager:
         ]
         for kind in kinds:
             self.gather_connections(kind)
+        logger.info("All network-related information gathered successfully.")
         return self.data
 
     def _get_duplex_name(self, duplex):
@@ -110,7 +129,6 @@ class NetworkManager:
         Returns:
             A dictionary containing network interface information.
         """
-
         # Mapping of address family integers to human-readable names
         addr_family_map = {
             netifaces.AF_INET: 'IPv4',
@@ -121,6 +139,7 @@ class NetworkManager:
         network_info = {}
 
         try:
+            logger.info("Gathering detailed network interface information...")
             interfaces = netifaces.interfaces()
             gateways = netifaces.gateways()  # Get the gateways information
 
@@ -164,16 +183,18 @@ class NetworkManager:
                 
                 network_info[interface] = interface_info
 
+            logger.info("Detailed network interface information gathered successfully.")
             return network_info
 
         except Exception as e:
-            # Log the error or handle it appropriately for your application
-            return {"error":f"Error getting network information: {str(e)}"}
+            logger.error(f"Error getting network information: {str(e)}")
+            return {"error": f"Error getting network information: {str(e)}"}
 
     @staticmethod
     # Function to manage network statistics
     def network_report():
         try:
+            logger.info("Generating network report...")
             # Network Usage Statistics
             deep_analyzed_report = json.dumps(NetworkManager().gather_all_info(), indent=4)
             network_interface_report = json.dumps(NetworkManager().get_network_info(), indent=4)
@@ -183,6 +204,8 @@ class NetworkManager:
 
             result = json.dumps(combined_report, indent=4)
             json_output = json.loads(result)
+            logger.info("Network report generated successfully.")
             return json_output  # Return the JSON output as a string
         except Exception as e:
-            return {"error":f"Error: {e}"}
+            logger.error(f"Error generating network report: {e}")
+            return {"error": f"Error: {e}"}
