@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Create file handler for logging to a file
-file_handler = logging.FileHandler('system_analysis.log')
+file_handler = logging.FileHandler('network_analysis.log')
 file_handler.setLevel(logging.DEBUG)  # Write all logs (DEBUG and higher) to the file
 
 # Create a stream handler for the terminal (set to WARNING or higher to suppress DEBUG and INFO)
