@@ -11,8 +11,27 @@ from network_connection_analyzer import NetworkManager
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
+
+# Create file handler for logging to a file
+file_handler = logging.FileHandler('network_analysis.log')
+file_handler.setLevel(logging.DEBUG)  # Write all logs (DEBUG and higher) to the file
+
+# Create a stream handler for the terminal (set to WARNING or higher to suppress DEBUG and INFO)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setLevel(logging.WARNING)  # Only show WARNING, ERROR, and CRITICAL messages on terminal
+
+# Create a formatter and attach it to both handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+# Set the logger's level to DEBUG to capture all log levels
+logger.setLevel(logging.DEBUG)
 
 class Database:
     """Class responsible for interacting with the SQLite database for request limits."""
